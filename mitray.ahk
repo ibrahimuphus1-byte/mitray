@@ -14,18 +14,18 @@
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
 Persistent
-OnError((*) => -1)  ; 捕获全局未处理异常,防止脚本意外退出
+OnError((*) => -1)  ; Catch global unhandled exceptions to prevent unexpected script exit
 
 ;==============================================================================
 ; Global Variables
 ;==============================================================================
-; 获取脚本基础名称(不含扩展名),用于注册表和程序标识
+; Get script base name (without extension) for registry and program identification
 global ScriptBaseName := RegExReplace(A_ScriptName, "\.[^.]+$", "")
 
 global MihomoProcess := 0
 global ConfigFile := A_ScriptDir "\config.ini"
 global MihomoConfigFile := ""
-global TempConfigFile := ""  ; 将在读取配置后设置到核心目录
+global TempConfigFile := ""  ; Will be set to core directory after reading config
 
 ; Configuration
 global CorePath := ""
@@ -41,16 +41,16 @@ global WebUIPath := ""
 global WebUIName := ""
 global AutoStartCore := true
 global AutoStartupDelaySec := 15
-global TUNControl := "runtime"  ; "runtime" 或 "file"
+global TUNControl := "runtime"  ; "runtime" or "file"
 global DesiredTUNEnabled := false
 
 ; State
 global IsProxyEnabled := false
 global IsTUNEnabled := false
 global IsAutoStartup := false
-global AutoStartupLevel := ""  ; "normal" 或 "admin"
-global AutoStartupMenu := 0  ; 开机自启子菜单对象
-global ProfileMenu := 0  ; mihomo 配置文件子菜单对象
+global AutoStartupLevel := ""  ; "normal" or "admin"
+global AutoStartupMenu := 0  ; Auto-startup submenu object
+global ProfileMenu := 0  ; mihomo config profile submenu object
 global StatusCheckTimer := 0
 global StatusTimerCallback := 0
 global TrayIconState := ""
@@ -85,7 +85,7 @@ if (AutoStartCore) {
     ; Even if not auto-starting, check if mihomo is already running
     if (CoreProcessName && ProcessExist(CoreProcessName)) {
         MihomoProcess := ProcessExist(CoreProcessName)
-        ShowNotification("检测到运行", "检测到 mihomo 已在运行", 2)
+        ShowNotification("Already Running", "Detected mihomo is already running", 2)
 
         ; Get initial TUN status from API
         GetTUNStatusFromAPI()
@@ -253,7 +253,7 @@ SaveSettingsConfig(corePath, configPath, configURL, autoStart, tunControl, tunEn
         }
         return true
     } catch as err {
-        MsgBox("保存配置失败: " . err.Message, "MiTray", "Iconx")
+        MsgBox("Failed to save config: " . err.Message, "MiTray", "Iconx")
         return false
     }
 }
@@ -302,47 +302,47 @@ ShowSettingsGui(firstRun := false) {
     global CorePath, ConfigPath, ConfigURL, AutoStartCore, TUNControl, DesiredTUNEnabled, AutoStartupDelaySec
 
     state := {Done: false, Saved: false}
-    title := firstRun ? "MiTray 首次设置" : "MiTray 设置"
+    title := firstRun ? "MiTray First-Time Setup" : "MiTray Settings"
     settingsGui := Gui("+AlwaysOnTop", title)
     settingsGui.MarginX := 14
     settingsGui.MarginY := 14
-    settingsGui.SetFont("s9", "Microsoft YaHei UI")
+    settingsGui.SetFont("s9", "Segoe UI")
 
-    settingsGui.Add("Text", "x14 y18 w120", "mihomo 核心")
+    settingsGui.Add("Text", "x14 y18 w120", "mihomo Core")
     coreEdit := settingsGui.Add("Edit", "x140 y15 w360", CorePath)
-    browseCoreBtn := settingsGui.Add("Button", "x510 y14 w70", "浏览...")
+    browseCoreBtn := settingsGui.Add("Button", "x510 y14 w70", "Browse...")
 
-    settingsGui.Add("Text", "x14 y58 w120", "本地配置文件")
+    settingsGui.Add("Text", "x14 y58 w120", "Local Config File")
     configEdit := settingsGui.Add("Edit", "x140 y55 w360", ConfigPath)
-    browseConfigBtn := settingsGui.Add("Button", "x510 y54 w70", "浏览...")
+    browseConfigBtn := settingsGui.Add("Button", "x510 y54 w70", "Browse...")
 
-    settingsGui.Add("Text", "x14 y98 w120", "远程配置 URL")
+    settingsGui.Add("Text", "x14 y98 w120", "Remote Config URL")
     urlEdit := settingsGui.Add("Edit", "x140 y95 w440", ConfigURL)
 
-    autoStartCheck := settingsGui.Add("Checkbox", "x140 y135 w220", "启动 MiTray 时自动启动 mihomo")
+    autoStartCheck := settingsGui.Add("Checkbox", "x140 y135 w220", "Auto-start mihomo when MiTray launches")
     autoStartCheck.Value := AutoStartCore ? 1 : 0
 
-    settingsGui.Add("Text", "x14 y165 w120", "TUN 控制")
-    tunRuntimeRadio := settingsGui.Add("Radio", "x140 y165 w190", "MiTray 运行时接管")
-    tunFileRadio := settingsGui.Add("Radio", "x340 y165 w190", "跟随 YAML 的 tun.enable")
+    settingsGui.Add("Text", "x14 y165 w120", "TUN Control")
+    tunRuntimeRadio := settingsGui.Add("Radio", "x140 y165 w190", "MiTray Runtime Override")
+    tunFileRadio := settingsGui.Add("Radio", "x340 y165 w190", "Follow tun.enable in YAML")
     tunRuntimeRadio.Value := (TUNControl = "runtime") ? 1 : 0
     tunFileRadio.Value := (TUNControl = "file") ? 1 : 0
 
-    tunEnabledCheck := settingsGui.Add("Checkbox", "x140 y195 w260", "接管时开启 TUN")
+    tunEnabledCheck := settingsGui.Add("Checkbox", "x140 y195 w260", "Enable TUN when overriding")
     tunEnabledCheck.Value := DesiredTUNEnabled ? 1 : 0
 
-    settingsGui.Add("Text", "x14 y232 w120", "自启延迟秒数")
+    settingsGui.Add("Text", "x14 y232 w120", "Auto-start Delay (sec)")
     delayEdit := settingsGui.Add("Edit", "x140 y229 w80 Number", AutoStartupDelaySec)
     settingsGui.Add("UpDown", "Range0-600", AutoStartupDelaySec)
 
-    settingsGui.Add("Text", "x140 y258 w440 c666666", "本地配置文件和远程配置 URL 填一个即可；如果都填写，远程 URL 优先。")
+    settingsGui.Add("Text", "x140 y258 w440 c666666", "Fill in either Local Config File or Remote Config URL; if both are filled, Remote URL takes precedence.")
 
-    settingsGui.Add("Text", "x14 y292 w120", "解析结果")
+    settingsGui.Add("Text", "x14 y292 w120", "Parse Results")
     previewEdit := settingsGui.Add("Edit", "x140 y289 w440 h105 Multi ReadOnly -Wrap +VScroll")
 
-    testBtn := settingsGui.Add("Button", "x140 y410 w100", "测试配置")
-    saveBtn := settingsGui.Add("Button", "x390 y410 w90 Default", "保存")
-    cancelBtn := settingsGui.Add("Button", "x490 y410 w90", firstRun ? "退出" : "取消")
+    testBtn := settingsGui.Add("Button", "x140 y410 w100", "Test Config")
+    saveBtn := settingsGui.Add("Button", "x390 y410 w90 Default", "Save")
+    cancelBtn := settingsGui.Add("Button", "x490 y410 w90", firstRun ? "Exit" : "Cancel")
 
     browseCoreBtn.OnEvent("Click", (*) => BrowseCoreFileAndPreview(coreEdit, previewEdit, configEdit, urlEdit))
     browseConfigBtn.OnEvent("Click", (*) => BrowseConfigFileAndPreview(configEdit, previewEdit, coreEdit, urlEdit))
@@ -370,7 +370,7 @@ ShowSettingsGui(firstRun := false) {
 }
 
 BrowseCoreFile(coreEdit) {
-    selected := FileSelect(, coreEdit.Value, "选择 mihomo 核心", "Executable (*.exe)")
+    selected := FileSelect(, coreEdit.Value, "Select mihomo Core", "Executable (*.exe)")
     if (selected) {
         coreEdit.Value := selected
     }
@@ -382,7 +382,7 @@ BrowseCoreFileAndPreview(coreEdit, previewEdit, configEdit, urlEdit) {
 }
 
 BrowseConfigFile(configEdit) {
-    selected := FileSelect(, configEdit.Value, "选择 mihomo 配置文件", "YAML (*.yaml; *.yml)")
+    selected := FileSelect(, configEdit.Value, "Select mihomo Config File", "YAML (*.yaml; *.yml)")
     if (selected) {
         configEdit.Value := selected
     }
@@ -401,52 +401,52 @@ UpdateSettingsPreview(previewEdit, coreEdit, configEdit, urlEdit, testAPI := fal
     lines := []
 
     if (corePath && FileExist(corePath)) {
-        lines.Push("核心: OK")
+        lines.Push("Core: OK")
     } else if (corePath) {
-        lines.Push("核心: 文件不存在")
+        lines.Push("Core: File not found")
     } else {
-        lines.Push("核心: 未选择")
+        lines.Push("Core: Not selected")
     }
 
     if (configURL) {
-        lines.Push("远程配置: 已填写，将优先使用")
+        lines.Push("Remote Config: Provided, will take precedence")
     } else {
-        lines.Push("远程配置: 未填写")
+        lines.Push("Remote Config: Not provided")
     }
 
     parsed := 0
     if (configPath) {
         if (!FileExist(configPath)) {
-            lines.Push("本地配置: 文件不存在")
+            lines.Push("Local Config: File not found")
         } else {
             try {
                 parsed := ReadMihomoConfig(configPath)
-                lines.Push("本地配置: OK")
+                lines.Push("Local Config: OK")
                 lines.Push("API: " . DisplayConfigValue(parsed.Controller))
-                lines.Push("代理端口: " . DisplayConfigValue(parsed.ProxyPort))
+                lines.Push("Proxy Port: " . DisplayConfigValue(parsed.ProxyPort))
                 lines.Push("WebUI: " . BuildWebUIDisplay(parsed))
                 if (!parsed.Controller) {
-                    lines.Push("提示: 未解析到 external-controller")
+                    lines.Push("Hint: external-controller not found")
                 }
                 if (!parsed.ProxyPort) {
-                    lines.Push("提示: 未解析到 mixed-port/port")
+                    lines.Push("Hint: mixed-port/port not found")
                 }
             } catch as err {
-                lines.Push("本地配置: 读取失败 - " . err.Message)
+                lines.Push("Local Config: Read failed - " . err.Message)
             }
         }
     } else {
-        lines.Push("本地配置: 未选择")
+        lines.Push("Local Config: Not selected")
     }
 
     if (testAPI) {
         if (parsed && parsed.Controller) {
             result := TestMihomoAPI(parsed.Controller, parsed.Secret)
-            lines.Push("API 测试: " . result)
+            lines.Push("API Test: " . result)
         } else if (configURL) {
-            lines.Push("API 测试: 远程配置需要核心启动后解析")
+            lines.Push("API Test: Remote config requires core to be started first")
         } else {
-            lines.Push("API 测试: 缺少 external-controller")
+            lines.Push("API Test: Missing external-controller")
         }
     }
 
@@ -454,12 +454,12 @@ UpdateSettingsPreview(previewEdit, coreEdit, configEdit, urlEdit, testAPI := fal
 }
 
 DisplayConfigValue(value) {
-    return value ? value : "未解析到"
+    return value ? value : "Not found"
 }
 
 BuildWebUIDisplay(parsed) {
     if (!parsed.WebUIPath && !parsed.WebUIName) {
-        return "未解析到"
+        return "Not found"
     }
 
     path := parsed.WebUIPath
@@ -481,9 +481,9 @@ TestMihomoAPI(controller, secret) {
         if (whr.Status = 200) {
             return "OK"
         }
-        return "失败 HTTP " . whr.Status
+        return "Failed HTTP " . whr.Status
     } catch as err {
-        return "无法连接 - " . err.Message
+        return "Cannot connect - " . err.Message
     }
 }
 
@@ -503,12 +503,12 @@ SaveSettingsGuiValues(settingsGui, state, coreEdit, configEdit, urlEdit, autoSta
     delayValue := Trim(delayEdit.Value)
 
     if (!corePath || !FileExist(corePath)) {
-        MsgBox("请选择有效的 mihomo 核心文件。", "MiTray", "Iconx")
+        MsgBox("Please select a valid mihomo core file.", "MiTray", "Iconx")
         return
     }
 
     if (!configURL && (!configPath || !FileExist(configPath))) {
-        MsgBox("请在「本地配置文件」和「远程配置 URL」中至少填写一个。", "MiTray", "Iconx")
+        MsgBox("Please fill in at least one of Local Config File or Remote Config URL.", "MiTray", "Iconx")
         return
     }
 
@@ -721,33 +721,33 @@ SetupTrayMenu() {
     A_TrayMenu.Delete()
 
     ; Add menu items
-    A_TrayMenu.Add("打开 WebUI", MenuOpenWebUI)
+    A_TrayMenu.Add("Open WebUI", MenuOpenWebUI)
     A_TrayMenu.Add()  ; Separator
-    A_TrayMenu.Add("启用系统代理", MenuToggleProxy)
-    A_TrayMenu.Add("TUN 模式", MenuToggleTUN)
+    A_TrayMenu.Add("Enable System Proxy", MenuToggleProxy)
+    A_TrayMenu.Add("TUN Mode", MenuToggleTUN)
     A_TrayMenu.Add()  ; Separator
-    A_TrayMenu.Add("刷新状态", MenuRefreshStatus)
+    A_TrayMenu.Add("Refresh Status", MenuRefreshStatus)
 
-    ; mihomo 配置文件子菜单
+    ; mihomo config profile submenu
     ProfileMenu := Menu()
     BuildProfileMenu()
-    A_TrayMenu.Add("选择 mihomo 配置", ProfileMenu)
-    A_TrayMenu.Add("MiTray 设置...", MenuOpenSettings)
+    A_TrayMenu.Add("Select mihomo Config", ProfileMenu)
+    A_TrayMenu.Add("MiTray Settings...", MenuOpenSettings)
     A_TrayMenu.Add()  ; Separator
 
-    ; 创建开机自启子菜单
+    ; Create auto-startup submenu
     AutoStartupMenu := Menu()
-    AutoStartupMenu.Add("普通权限", MenuAutoStartupNormal)
-    AutoStartupMenu.Add("管理员权限", MenuAutoStartupAdmin)
-    A_TrayMenu.Add("开机自启", AutoStartupMenu)
+    AutoStartupMenu.Add("Normal Privileges", MenuAutoStartupNormal)
+    AutoStartupMenu.Add("Administrator Privileges", MenuAutoStartupAdmin)
+    A_TrayMenu.Add("Auto-start on Boot", AutoStartupMenu)
 
     A_TrayMenu.Add()  ; Separator
-    A_TrayMenu.Add("打开程序目录", MenuOpenScriptDir)
-    A_TrayMenu.Add("打开核心目录", MenuOpenCoreDir)
+    A_TrayMenu.Add("Open Program Directory", MenuOpenScriptDir)
+    A_TrayMenu.Add("Open Core Directory", MenuOpenCoreDir)
     A_TrayMenu.Add()  ; Separator
-    A_TrayMenu.Add("重启内核", MenuRestartCore)
-    A_TrayMenu.Add("停止内核", MenuStopCore)
-    A_TrayMenu.Add("退出程序", MenuExitProgram)
+    A_TrayMenu.Add("Restart Core", MenuRestartCore)
+    A_TrayMenu.Add("Stop Core", MenuStopCore)
+    A_TrayMenu.Add("Exit Program", MenuExitProgram)
 
     ; Update menu states
     UpdateMenuStates()
@@ -767,7 +767,7 @@ BuildProfileMenu() {
     if (Profiles.Count > 0) {
         ProfileMenu.Add()
     }
-    ProfileMenu.Add("添加配置文件...", MenuAddProfile)
+    ProfileMenu.Add("Add Config File...", MenuAddProfile)
 }
 
 UpdateMenuStates() {
@@ -775,29 +775,29 @@ UpdateMenuStates() {
 
     ; Update proxy checkbox
     if (IsProxyEnabled) {
-        A_TrayMenu.Check("启用系统代理")
+        A_TrayMenu.Check("Enable System Proxy")
     } else {
-        A_TrayMenu.Uncheck("启用系统代理")
+        A_TrayMenu.Uncheck("Enable System Proxy")
     }
 
     ; Update TUN checkbox
     if (IsTUNEnabled) {
-        A_TrayMenu.Check("TUN 模式")
+        A_TrayMenu.Check("TUN Mode")
     } else {
-        A_TrayMenu.Uncheck("TUN 模式")
+        A_TrayMenu.Uncheck("TUN Mode")
     }
 
     ; Update auto-startup checkboxes
     if (AutoStartupMenu) {
         if (AutoStartupLevel = "normal") {
-            AutoStartupMenu.Check("普通权限")
-            AutoStartupMenu.Uncheck("管理员权限")
+            AutoStartupMenu.Check("Normal Privileges")
+            AutoStartupMenu.Uncheck("Administrator Privileges")
         } else if (AutoStartupLevel = "admin") {
-            AutoStartupMenu.Uncheck("普通权限")
-            AutoStartupMenu.Check("管理员权限")
+            AutoStartupMenu.Uncheck("Normal Privileges")
+            AutoStartupMenu.Check("Administrator Privileges")
         } else {
-            AutoStartupMenu.Uncheck("普通权限")
-            AutoStartupMenu.Uncheck("管理员权限")
+            AutoStartupMenu.Uncheck("Normal Privileges")
+            AutoStartupMenu.Uncheck("Administrator Privileges")
         }
     }
 
@@ -820,13 +820,13 @@ MenuOpenWebUI(*) {
     global APIController, APISecret, WebUIPath, WebUIName
 
     if (!APIController) {
-        ShowNotification("错误", "API 配置未设置", 3)
+        ShowNotification("Error", "API configuration not set", 3)
         return
     }
 
     ; Check if mihomo is running
     if (!IsMihomoRunning()) {
-        ShowNotification("错误", "mihomo 未运行", 3)
+        ShowNotification("Error", "mihomo is not running", 3)
         return
     }
 
@@ -844,7 +844,7 @@ MenuOpenWebUI(*) {
     }
 
     Run(url)
-    ShowNotification("WebUI", "已在浏览器中打开 WebUI", 2)
+    ShowNotification("WebUI", "WebUI opened in browser", 2)
 }
 
 MenuToggleProxy(*) {
@@ -865,7 +865,7 @@ MenuToggleTUN(*) {
 
 MenuRefreshStatus(*) {
     RefreshAllStatus()
-    ShowNotification("状态刷新", "已刷新系统代理和 TUN 状态", 2)
+    ShowNotification("Status Refreshed", "System proxy and TUN status refreshed", 2)
 }
 
 MenuOpenSettings(*) {
@@ -876,9 +876,9 @@ MenuOpenSettings(*) {
         CheckAutoStartup()
         CheckSystemProxyState()
         if (wasRunning) {
-            ShowNotification("配置已保存", "配置已保存，重启内核后生效", 3)
+            ShowNotification("Config Saved", "Config saved. Restart core to apply.", 3)
         } else {
-            ShowNotification("配置已保存", "配置已保存", 2)
+            ShowNotification("Config Saved", "Config saved", 2)
         }
     }
 }
@@ -890,13 +890,13 @@ MenuSelectProfile(itemName, *) {
 MenuAddProfile(*) {
     global ConfigFile, Profiles, ActiveProfile, ConfigPath
 
-    selected := FileSelect(, ConfigPath, "选择 mihomo 配置文件", "YAML (*.yaml; *.yml)")
+    selected := FileSelect(, ConfigPath, "Select mihomo Config File", "YAML (*.yaml; *.yml)")
     if (!selected) {
         return
     }
 
     SplitPath(selected, , , , &baseName)
-    result := InputBox("请输入配置名称：", "添加 mihomo 配置", , baseName ? baseName : "default")
+    result := InputBox("Please enter profile name:", "Add mihomo Profile", , baseName ? baseName : "default")
     if (result.Result != "OK") {
         return
     }
@@ -904,12 +904,12 @@ MenuAddProfile(*) {
     profileName := Trim(result.Value)
     profileName := RegExReplace(profileName, "[=\r\n]", "_")
     if (!profileName) {
-        ShowNotification("错误", "配置名称不能为空", 2)
+        ShowNotification("Error", "Profile name cannot be empty", 2)
         return
     }
 
     if (Profiles.Has(profileName)) {
-        ShowNotification("错误", "配置名称已存在: " . profileName, 3)
+        ShowNotification("Error", "Profile name already exists: " . profileName, 3)
         return
     }
 
@@ -918,7 +918,7 @@ MenuAddProfile(*) {
         IniWrite(selected, ConfigFile, "Profiles", profileName)
         SwitchMihomoProfile(profileName)
     } catch as err {
-        ShowNotification("错误", "添加配置失败: " . err.Message, 3)
+        ShowNotification("Error", "Failed to add profile: " . err.Message, 3)
     }
 }
 
@@ -926,7 +926,7 @@ SwitchMihomoProfile(profileName) {
     global ConfigFile, Profiles, ActiveProfile, ConfigPath, ConfigURL
 
     if (!Profiles.Has(profileName)) {
-        ShowNotification("错误", "配置不存在: " . profileName, 2)
+        ShowNotification("Error", "Profile does not exist: " . profileName, 2)
         return false
     }
 
@@ -946,7 +946,7 @@ SwitchMihomoProfile(profileName) {
         IniWrite(ConfigPath, ConfigFile, "Mihomo", "ConfigPath")
         IniWrite("", ConfigFile, "Mihomo", "ConfigURL")
     } catch as err {
-        ShowNotification("错误", "保存配置选择失败: " . err.Message, 3)
+        ShowNotification("Error", "Failed to save profile selection: " . err.Message, 3)
         return false
     }
 
@@ -965,7 +965,7 @@ SwitchMihomoProfile(profileName) {
         UpdateMenuStates()
     }
 
-    ShowNotification("配置切换", "已切换到: " . ActiveProfile, 2)
+    ShowNotification("Profile Switched", "Switched to: " . ActiveProfile, 2)
     return true
 }
 
@@ -993,23 +993,23 @@ MenuOpenCoreDir(*) {
     global CorePath
 
     if (!CorePath || !FileExist(CorePath)) {
-        ShowNotification("错误", "核心路径未配置或文件不存在", 3)
+        ShowNotification("Error", "Core path not configured or file does not exist", 3)
         return
     }
 
-    ; 获取核心所在目录
+    ; Get the directory containing the core
     SplitPath(CorePath, , &coreDir)
     Run('explorer.exe "' . coreDir . '"')
 }
 
 MenuRestartCore(*) {
-    ShowNotification("重启内核", "正在重启 mihomo 内核...", 2)
+    ShowNotification("Restart Core", "Restarting mihomo core...", 2)
 
     ; Try API restart first
     if (RestartCoreViaAPI()) {
         Sleep(3000)
         RefreshAllStatus()
-        ShowNotification("重启成功", "mihomo 内核已通过 API 重启", 2)
+        ShowNotification("Restart Successful", "mihomo core restarted via API", 2)
         return
     }
 
@@ -1085,7 +1085,7 @@ RefreshAllStatus() {
         ; Update menu
         UpdateMenuStates()
     } catch as err {
-        ; 防止定时器回调中的异常导致脚本崩溃
+        ; Prevent exceptions in timer callback from crashing the script
     }
 }
 
@@ -1116,17 +1116,17 @@ StartMihomo() {
 
     ; Check if mihomo process is already running
     if (IsMihomoRunning()) {
-        ShowNotification("提示", "mihomo 已在运行中", 2)
+        ShowNotification("Notice", "mihomo is already running", 2)
         return true
     }
 
     ; Validate core path
     if (!CorePath || !FileExist(CorePath)) {
-        ShowNotification("错误", "mihomo 核心路径未配置或文件不存在`n请编辑 config.ini", 3)
+        ShowNotification("Error", "mihomo core path not configured or file does not exist`nPlease edit config.ini", 3)
         return false
     }
 
-    ; 设置临时配置文件路径到核心目录
+    ; Set temp config file path to core directory
     if (CorePath) {
         SplitPath(CorePath, , &coreDir)
         TempConfigFile := coreDir . "\config-downloaded.yaml"
@@ -1135,22 +1135,22 @@ StartMihomo() {
     ; Determine which config to use
     if (ConfigURL) {
         ; Download config from URL
-        ShowNotification("下载配置", "正在从 URL 下载配置文件...", 2)
+        ShowNotification("Download Config", "Downloading config file from URL...", 2)
         if (!DownloadConfig(ConfigURL, TempConfigFile)) {
-            ShowNotification("错误", "下载配置文件失败", 2)
+            ShowNotification("Error", "Failed to download config file", 2)
             return false
         }
         MihomoConfigFile := TempConfigFile
     } else if (ConfigPath) {
         MihomoConfigFile := ConfigPath
     } else {
-        ShowNotification("错误", "未配置本地配置文件或远程 URL`n请编辑 config.ini", 2)
+        ShowNotification("Error", "No local config file or remote URL configured`nPlease edit config.ini", 2)
         return false
     }
 
     ; Validate config file exists
     if (!FileExist(MihomoConfigFile)) {
-        ShowNotification("错误", "配置文件不存在: " . MihomoConfigFile, 3)
+        ShowNotification("Error", "Config file does not exist: " . MihomoConfigFile, 3)
         return false
     }
 
@@ -1167,14 +1167,14 @@ StartMihomo() {
 
         ; Check if process started successfully
         if (IsMihomoRunning()) {
-            ShowNotification("启动成功", "mihomo 内核已启动", 2)
+            ShowNotification("Started Successfully", "mihomo core started", 2)
             return true
         } else {
-            ShowNotification("错误", "mihomo 启动失败", 2)
+            ShowNotification("Error", "mihomo failed to start", 2)
             return false
         }
     } catch as err {
-        ShowNotification("错误", "启动 mihomo 失败: " . err.Message, 2)
+        ShowNotification("Error", "Failed to start mihomo: " . err.Message, 2)
         return false
     }
 }
@@ -1183,15 +1183,15 @@ StopMihomo() {
     global MihomoProcess, CoreProcessName, IsTUNEnabled
 
     if (!IsMihomoRunning()) {
-        ShowNotification("提示", "mihomo 未在运行", 2)
+        ShowNotification("Notice", "mihomo is not running", 2)
         return
     }
 
-    ; 尝试关闭进程(先用进程名,更可靠)
+    ; Try to close process (use process name first, more reliable)
     if (CoreProcessName && ProcessExist(CoreProcessName)) {
         ProcessClose(CoreProcessName)
 
-        ; 等待进程退出(最多等待3秒)
+        ; Wait for process exit (up to 3 seconds)
         waitCount := 0
         while (ProcessExist(CoreProcessName) && waitCount < 30) {
             Sleep(100)
@@ -1199,11 +1199,11 @@ StopMihomo() {
         }
     }
 
-    ; 如果进程名关闭失败,尝试用 PID 关闭
+    ; If process name close fails, try closing by PID
     if (MihomoProcess && ProcessExist(MihomoProcess)) {
         ProcessClose(MihomoProcess)
 
-        ; 再次等待
+        ; Wait again
         waitCount := 0
         while (ProcessExist(MihomoProcess) && waitCount < 30) {
             Sleep(100)
@@ -1211,13 +1211,13 @@ StopMihomo() {
         }
     }
 
-    ; 验证是否成功关闭
+    ; Verify successful close
     if (IsMihomoRunning()) {
-        ShowNotification("错误", "无法停止 mihomo 内核,请手动结束进程", 3)
+        ShowNotification("Error", "Unable to stop mihomo core. Please end the process manually.", 3)
         return
     }
 
-    ; 成功关闭,重置状态
+    ; Successfully closed, reset state
     MihomoProcess := 0
     IsTUNEnabled := false
 
@@ -1225,7 +1225,7 @@ StopMihomo() {
     CheckSystemProxyState()
     UpdateMenuStates()
 
-    ShowNotification("停止", "mihomo 内核已停止", 2)
+    ShowNotification("Stopped", "mihomo core stopped", 2)
 }
 
 RestartCoreViaAPI() {
@@ -1291,7 +1291,7 @@ EnableSystemProxy() {
     global IsProxyEnabled, ProxyPort
 
     if (!IsValidPort(ProxyPort)) {
-        ShowNotification("错误", "代理端口无效，请检查 mihomo 配置中的 mixed-port/port", 3)
+        ShowNotification("Error", "Invalid proxy port. Please check mixed-port/port in mihomo config.", 3)
         return
     }
 
@@ -1310,9 +1310,9 @@ EnableSystemProxy() {
 
         IsProxyEnabled := true
         UpdateMenuStates()
-        ShowNotification("系统代理", "系统代理已启用 (端口: " . ProxyPort . ")", 2)
+        ShowNotification("System Proxy", "System proxy enabled (port: " . ProxyPort . ")", 2)
     } catch as err {
-        ShowNotification("错误", "启用系统代理失败: " . err.Message, 2)
+        ShowNotification("Error", "Failed to enable system proxy: " . err.Message, 2)
     }
 }
 
@@ -1330,9 +1330,9 @@ DisableSystemProxy() {
 
         IsProxyEnabled := false
         UpdateMenuStates()
-        ShowNotification("系统代理", "系统代理已禁用", 2)
+        ShowNotification("System Proxy", "System proxy disabled", 2)
     } catch as err {
-        ShowNotification("错误", "禁用系统代理失败: " . err.Message, 2)
+        ShowNotification("Error", "Failed to disable system proxy: " . err.Message, 2)
     }
 }
 
@@ -1426,7 +1426,7 @@ SetTUNMode(enabled, remember := true, notify := true) {
     ; Ensure mihomo is running
     if (!IsMihomoRunning()) {
         if (notify) {
-            ShowNotification("错误", "mihomo 未运行", 2)
+            ShowNotification("Error", "mihomo is not running", 2)
         }
         return false
     }
@@ -1460,7 +1460,7 @@ SetTUNMode(enabled, remember := true, notify := true) {
                     }
                     UpdateMenuStates()
                     if (notify) {
-                        ShowNotification("TUN 模式", enabled ? "TUN 模式已启用" : "TUN 模式已禁用", 2)
+                        ShowNotification("TUN Mode", enabled ? "TUN mode enabled" : "TUN mode disabled", 2)
                     }
                     return true
                 }
@@ -1477,16 +1477,16 @@ SetTUNMode(enabled, remember := true, notify := true) {
 
     if (!A_IsAdmin && enabled) {
         if (notify) {
-            ShowNotification("权限不足", "TUN 模式需要管理员权限`n请退出程序后选择「以管理员身份运行」", 3)
+            ShowNotification("Insufficient Privileges", "TUN mode requires administrator privileges`nPlease exit the program and run as administrator", 3)
         }
     } else if (notify) {
-        ShowNotification("错误", (enabled ? "启用" : "禁用") . " TUN 模式失败，请检查 mihomo API 是否正常", 2)
+        ShowNotification("Error", (enabled ? "Failed to enable" : "Failed to disable") . " TUN mode. Please check if mihomo API is working properly.", 2)
     }
     return false
 }
 
 ;==============================================================================
-; Auto-startup Management (使用任务计划程序 + XML)
+; Auto-startup Management (Task Scheduler + XML)
 ;==============================================================================
 CheckAutoStartup() {
     global IsAutoStartup, AutoStartupLevel, ScriptBaseName
@@ -1522,18 +1522,18 @@ EnableAutoStartup(level := "normal") {
     global IsAutoStartup, AutoStartupLevel, ScriptBaseName, AutoStartupDelaySec
 
     try {
-        ; 先删除已存在的任务（如果有）
+        ; First delete existing task (if any)
         DisableAutoStartup()
 
-        ; 获取可执行文件路径
+        ; Get executable path
         exePath := A_IsCompiled ? A_ScriptFullPath : A_ScriptFullPath
 
-        ; 根据权限级别设置 RunLevel
+        ; Set RunLevel based on privilege level
         runLevel := (level = "admin") ? "HighestAvailable" : "LeastPrivilege"
-        levelText := (level = "admin") ? "管理员权限" : "普通权限"
+        levelText := (level = "admin") ? "Administrator Privileges" : "Normal Privileges"
         delayIso := "PT" . AutoStartupDelaySec . "S"
 
-        ; 生成 XML 内容（路径需要 XML 转义）
+        ; Generate XML content (path needs XML escaping)
         exePathEscaped := XmlEscape(exePath)
 
         xmlContent := '<?xml version="1.0" encoding="UTF-16"?>'
@@ -1579,55 +1579,55 @@ EnableAutoStartup(level := "normal") {
             . '`r`n  </Actions>'
             . '`r`n</Task>'
 
-        ; 创建临时 XML 文件
+        ; Create temp XML file
         tempXmlPath := A_Temp . '\schtask_' . ScriptBaseName . '_' . A_TickCount . '.xml'
 
-        ; 使用 FileAppend（自动处理 UTF-16 BOM）
+        ; Use FileAppend (handles UTF-16 BOM automatically)
         try {
-            FileDelete(tempXmlPath)  ; 确保文件不存在
+            FileDelete(tempXmlPath)  ; Ensure file doesn't exist
         }
 
-        ; 写入文件，使用 UTF-16 编码
+        ; Write file using UTF-16 encoding
         FileAppend(xmlContent, tempXmlPath, "UTF-16")
 
-        ; 验证文件是否创建成功
+        ; Verify file was created successfully
         if (!FileExist(tempXmlPath)) {
-            ShowNotification("错误", "无法创建临时 XML 文件", 2)
+            ShowNotification("Error", "Unable to create temp XML file", 2)
             return
         }
 
-        ; 使用 XML 文件创建任务
+        ; Create task using XML file
         cmd := 'schtasks /Create /TN "' . ScriptBaseName . '" '
             . '/XML "' . tempXmlPath . '" '
             . '/F'
 
-        ; 执行命令并获取输出
+        ; Execute command and get output
         result := RunWaitOne(cmd)
 
-        ; 删除临时文件
+        ; Delete temp file
         try {
             FileDelete(tempXmlPath)
         } catch {
-            ; 忽略删除失败
+            ; Ignore deletion failure
         }
 
-        ; 检查是否成功
-        if (InStr(result, "SUCCESS") || InStr(result, "成功") || InStr(result, "已成功")) {
+        ; Check if successful
+        if (InStr(result, "SUCCESS") || InStr(result, "success") || InStr(result, "successfully")) {
             IsAutoStartup := true
             AutoStartupLevel := level
             UpdateMenuStates()
-            ShowNotification("开机自启", "已启用开机自启动 (" . levelText . ")", 2)
+            ShowNotification("Auto-start on Boot", "Auto-start enabled (" . levelText . ")", 2)
         } else {
-            ; 显示详细错误信息
-            ShowNotification("错误", "启用开机自启失败`n`n" . result, 5)
+            ; Show detailed error information
+            ShowNotification("Error", "Failed to enable auto-start`n`n" . result, 5)
         }
     } catch as err {
-        ; 确保删除临时文件
+        ; Ensure temp file is deleted
         try {
             if (FileExist(tempXmlPath))
                 FileDelete(tempXmlPath)
         }
-        ShowNotification("错误", "启用开机自启失败: " . err.Message, 3)
+        ShowNotification("Error", "Failed to enable auto-start: " . err.Message, 3)
     }
 }
 
@@ -1635,7 +1635,7 @@ DisableAutoStartup() {
     global IsAutoStartup, AutoStartupLevel, ScriptBaseName
 
     try {
-        ; 删除任务计划程序中的任务
+        ; Delete task from Task Scheduler
         cmd := 'schtasks /Delete /TN "' . ScriptBaseName . '" /F'
         result := RunWaitOne(cmd)
 
@@ -1643,12 +1643,12 @@ DisableAutoStartup() {
         AutoStartupLevel := ""
         UpdateMenuStates()
 
-        ; 只有在任务存在时才显示成功通知
-        if (InStr(result, "SUCCESS") || InStr(result, "成功")) {
-            ShowNotification("开机自启", "已禁用开机自启动", 2)
+        ; Only show success notification if task exists
+        if (InStr(result, "SUCCESS") || InStr(result, "success")) {
+            ShowNotification("Auto-start on Boot", "Auto-start disabled", 2)
         }
     } catch as err {
-        ; 忽略删除不存在任务的错误
+        ; Ignore error for deleting non-existent task
         IsAutoStartup := false
         AutoStartupLevel := ""
         UpdateMenuStates()
@@ -1667,13 +1667,13 @@ RunWaitOne(command) {
     shell := ComObject("WScript.Shell")
     exec := shell.Exec(A_ComSpec " /C " . command)
 
-    ; 等待命令完成并读取输出
+    ; Wait for command to complete and read output
     output := exec.StdOut.ReadAll()
 
     return output
 }
 
-; XML 转义函数
+; XML escape function
 XmlEscape(str) {
     str := StrReplace(str, "&", "&amp;")
     str := StrReplace(str, "<", "&lt;")
